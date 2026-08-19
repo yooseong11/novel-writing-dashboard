@@ -176,7 +176,7 @@
         monthSelect.addEventListener("change", event => renderMonth(event.target.value));
         renderMonth(defaultMonth);
       }
-      fetch("./data.json").then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
+      fetch(`./data.json?v=${Date.now()}`, { cache: "no-store" }).then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
     </script>
   </body>
 </html>
