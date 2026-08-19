@@ -47,19 +47,19 @@
       </header>
 
       <section class="summary" aria-label="집필 요약">
-        <article class="metric"><span>누적 분량</span><strong id="all-total">–</strong></article>
+        <article class="metric"><span>올해 누적 분량</span><strong id="year-total">–</strong></article>
         <article class="metric"><span>이번 달</span><strong id="month-total">–</strong></article>
+        <article class="metric"><span>오늘</span><strong id="today-total">–</strong></article>
         <article class="metric"><span>최고 기록</span><strong id="best-day">–</strong></article>
-        <article class="metric"><span>집필 연속일</span><strong id="streak">–</strong></article>
       </section>
 
       <section aria-labelledby="chart-heading">
-        <div class="section-title"><h2 id="chart-heading">일별 분량과 누적 기록</h2><span class="period" id="period"></span></div>
-        <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="일별 글자 수와 누적 글자 수 그래프"></canvas></div></div>
+        <div class="section-title"><h2 id="chart-heading">이번 달 일별 분량</h2><span class="period" id="period"></span></div>
+        <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="이번 달 일별 글자 수 그래프"></canvas></div></div>
       </section>
 
       <section class="entries-section" aria-labelledby="entries-heading">
-        <div class="section-title"><h2 id="entries-heading">최근 기록</h2><span class="period">최근 12건</span></div>
+        <div class="section-title"><h2 id="entries-heading">최근 기록</h2><span class="period">최근 12일</span></div>
         <div class="entries" id="entries"></div>
       </section>
       <footer>커밋 메시지 <code>ㅇㄷ:500</code> 형식의 기록만 집계합니다.</footer>
@@ -67,46 +67,59 @@
 
     <script>
       const number = new Intl.NumberFormat("ko-KR");
-      const fmtDate = (date) => new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
-      const oneDay = 24 * 60 * 60 * 1000;
-      const differenceInDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / oneDay);
+      const fmtDate = (date) => new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00+09:00`));
+      const koreaDate = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 
       function setText(id, value) { document.getElementById(id).innerHTML = value; }
-      function writingStreak(days) {
-        let streak = 0;
-        for (let index = days.length - 1; index >= 0 && days[index].characters > 0; index--) streak++;
-        return streak;
+      function calendarDays(first, last) {
+        const result = [];
+        const cursor = new Date(`${first}T12:00:00Z`);
+        const end = new Date(`${last}T12:00:00Z`);
+        while (cursor <= end) {
+          result.push(cursor.toISOString().slice(0, 10));
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+        return result;
       }
       function renderEmpty() {
         document.getElementById("entries").innerHTML = '<p class="empty">아직 집계할 기록이 없어요. 첫 커밋을 <code>ㅇㄷ:500</code>처럼 남겨 보세요.</p>';
         document.getElementById("updated").textContent = "아직 기록이 없습니다";
-        ["all-total", "month-total", "best-day", "streak"].forEach(id => setText(id, "0 <small>자</small>"));
+        ["year-total", "month-total", "today-total", "best-day"].forEach(id => setText(id, "0 <small>자</small>"));
       }
       function render(data) {
         const { days, entries, generatedAt } = data;
         if (!days.length) return renderEmpty();
-        const todayMonth = new Date().toISOString().slice(0, 7);
-        const total = days.at(-1).total;
-        const month = days.filter(day => day.date.startsWith(todayMonth)).reduce((sum, day) => sum + day.characters, 0);
-        const best = days.reduce((winner, day) => day.characters > winner.characters ? day : winner, days[0]);
-        const streak = writingStreak(days);
-        setText("all-total", `${number.format(total)} <small>자</small>`);
+        const today = koreaDate();
+        const thisYear = today.slice(0, 4);
+        const thisMonth = today.slice(0, 7);
+        const daysByDate = new Map(days.map(day => [day.date, day]));
+        const yearDays = days.filter(day => day.date.startsWith(thisYear));
+        const month = yearDays.filter(day => day.date.startsWith(thisMonth)).reduce((sum, day) => sum + day.characters, 0);
+        const year = yearDays.reduce((sum, day) => sum + day.characters, 0);
+        const todayCount = daysByDate.get(today)?.characters ?? 0;
+        const best = yearDays.reduce((winner, day) => day.characters > winner.characters ? day : winner, { characters: 0 });
+        const monthDays = calendarDays(`${thisMonth}-01`, today).map(date => daysByDate.get(date) ?? { date, characters: 0 });
+        const entryCountByDate = entries.reduce((counts, entry) => {
+          counts.set(entry.date, (counts.get(entry.date) ?? 0) + 1);
+          return counts;
+        }, new Map());
+        const recentDays = days.filter(day => day.characters > 0).slice(-12).reverse();
+        setText("year-total", `${number.format(year)} <small>자</small>`);
         setText("month-total", `${number.format(month)} <small>자</small>`);
+        setText("today-total", `${number.format(todayCount)} <small>자</small>`);
         setText("best-day", `${number.format(best.characters)} <small>자</small>`);
-        setText("streak", `${number.format(streak)} <small>일</small>`);
-        document.getElementById("period").textContent = `${fmtDate(days[0].date)} – ${fmtDate(days.at(-1).date)}`;
+        document.getElementById("period").textContent = `${fmtDate(monthDays[0].date)} – ${fmtDate(today)}`;
         document.getElementById("updated").textContent = generatedAt ? `마지막 갱신 ${new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(generatedAt))}` : "기록을 불러왔습니다";
-        document.getElementById("entries").innerHTML = entries.slice(-12).reverse().map(entry => `<article class="entry"><time datetime="${entry.timestamp}">${fmtDate(entry.date)}</time><span class="commit">${entry.message}</span><span class="words">${number.format(entry.characters)}자</span></article>`).join("");
+        document.getElementById("entries").innerHTML = recentDays.map(day => `<article class="entry"><time datetime="${day.date}">${fmtDate(day.date)}</time><span class="commit">${number.format(entryCountByDate.get(day.date) ?? 0)}번 기록</span><span class="words">${number.format(day.characters)}자</span></article>`).join("");
         new Chart(document.getElementById("writing-chart"), {
-          data: { labels: days.map(day => fmtDate(day.date)), datasets: [
-            { type: "bar", label: "일별 글자 수", data: days.map(day => day.characters), backgroundColor: "#7650c8", borderRadius: 4, yAxisID: "daily", order: 2 },
-            { type: "line", label: "누적 글자 수", data: days.map(day => day.total), borderColor: "#ea7c54", pointRadius: 0, pointHoverRadius: 4, borderWidth: 2, tension: .28, yAxisID: "total", order: 1 }
+          type: "bar",
+          data: { labels: monthDays.map(day => fmtDate(day.date)), datasets: [
+            { label: "일별 글자 수", data: monthDays.map(day => day.characters), backgroundColor: "#7650c8", borderRadius: 4, maxBarThickness: 28 }
           ] },
-          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, padding: 18 } }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${number.format(context.raw)}자` } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, daily: { beginAtZero: true, position: "left", ticks: { callback: value => `${number.format(value)}자` }, grid: { color: "#eee6e2" } }, total: { beginAtZero: true, position: "right", ticks: { callback: value => `${number.format(value)}자` }, grid: { drawOnChartArea: false } } } }
+          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${number.format(context.raw)}자` } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { callback: value => `${number.format(value)}자` }, grid: { color: "#eee6e2" } } } }
         });
       }
       fetch("./data.json").then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
     </script>
   </body>
 </html>
-
