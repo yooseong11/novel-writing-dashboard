@@ -17,7 +17,7 @@
       .eyebrow, .updated { color: var(--muted); font-size: .9rem; }
       .eyebrow { margin: 0 0 8px; letter-spacing: .08em; text-transform: uppercase; }
       .updated { margin: 0 0 8px; text-align: right; }
-      .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 38px; }
+      .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 38px; }
       .metric, .chart-area, .entries { background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); }
       .metric { min-height: 126px; padding: 21px; }
       .metric span { display: block; color: var(--muted); font-size: .87rem; }
@@ -26,17 +26,26 @@
       .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 13px; }
       h2 { margin: 0; font-size: 1rem; font-weight: 650; }
       .period { color: var(--muted); font-size: .84rem; }
+      .chart-controls { display: flex; align-items: center; gap: 10px; }
+      .month-select { appearance: none; border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem; padding: 8px 28px 8px 10px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
       .chart-area { padding: 18px 18px 14px; min-height: 360px; }
       .chart-wrap { height: 300px; position: relative; }
       .entries-section { margin-top: 38px; }
       .entries { overflow: hidden; }
-      .entry { display: grid; grid-template-columns: 104px 1fr auto; gap: 16px; align-items: center; padding: 15px 20px; border-top: 1px solid var(--line); }
-      .entry:first-child { border-top: 0; }
-      .entry time, .entry .commit { color: var(--muted); font-size: .88rem; }
+      .day-group { border-top: 1px solid var(--line); }
+      .day-group:first-child { border-top: 0; }
+      .day-date { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 16px 20px 8px; color: var(--ink); font-size: .91rem; font-weight: 700; }
+      .praise { font-family: Georgia, "Times New Roman", serif; font-size: .82rem; font-weight: 500; letter-spacing: .02em; }
+      .praise.great { color: #42806e; }
+      .praise.good { color: #b36b28; }
+      .praise.perfect { color: var(--purple); }
+      .entry { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 7px 20px; }
+      .day-group .entry:last-child { padding-bottom: 16px; }
+      .entry .commit { color: var(--muted); font-size: .88rem; }
       .entry .words { font-weight: 700; color: var(--purple); font-variant-numeric: tabular-nums; }
       .empty { color: var(--muted); text-align: center; padding: 76px 20px; }
       footer { color: var(--muted); font-size: .8rem; margin-top: 24px; }
-      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 42px; } header { display: block; } .updated { text-align: left; margin-top: 15px; } .summary { grid-template-columns: repeat(2, 1fr); } .metric { min-height: 108px; padding: 17px; } .chart-area { padding: 14px 9px 12px; } .entry { grid-template-columns: 86px 1fr; gap: 10px; padding: 14px; } .entry .commit { display: none; } }
+      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 42px; } header { display: block; } .updated { text-align: left; margin-top: 15px; } .summary { grid-template-columns: repeat(2, 1fr); } .metric { min-height: 108px; padding: 17px; } .section-title { align-items: flex-start; flex-wrap: wrap; } .chart-area { padding: 14px 9px 12px; } .day-date, .entry { padding-left: 14px; padding-right: 14px; } }
     </style>
   </head>
   <body>
@@ -48,18 +57,18 @@
 
       <section class="summary" aria-label="집필 요약">
         <article class="metric"><span>올해 누적 분량</span><strong id="year-total">–</strong></article>
-        <article class="metric"><span>이번 달</span><strong id="month-total">–</strong></article>
+        <article class="metric"><span>선택한 달</span><strong id="month-total">–</strong></article>
+        <article class="metric"><span>이달 평균 작업량</span><strong id="month-average">–</strong></article>
         <article class="metric"><span>오늘</span><strong id="today-total">–</strong></article>
-        <article class="metric"><span>최고 기록</span><strong id="best-day">–</strong></article>
       </section>
 
       <section aria-labelledby="chart-heading">
-        <div class="section-title"><h2 id="chart-heading">이번 달 일별 분량</h2><span class="period" id="period"></span></div>
+        <div class="section-title"><h2 id="chart-heading">일별 분량</h2><div class="chart-controls"><select class="month-select" id="month-select" aria-label="조회할 달"></select><span class="period" id="period"></span></div></div>
         <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="이번 달 일별 글자 수 그래프"></canvas></div></div>
       </section>
 
       <section class="entries-section" aria-labelledby="entries-heading">
-        <div class="section-title"><h2 id="entries-heading">최근 기록</h2><span class="period">최근 12일</span></div>
+        <div class="section-title"><h2 id="entries-heading">최근 기록</h2><span class="period" id="entries-period">최근 12일</span></div>
         <div class="entries" id="entries"></div>
       </section>
       <footer>커밋 메시지 <code>ㅇㄷ:500</code> 형식의 기록만 집계합니다.</footer>
@@ -68,9 +77,17 @@
     <script>
       const number = new Intl.NumberFormat("ko-KR");
       const fmtDate = (date) => new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00+09:00`));
+      const fmtMonth = (month) => new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(new Date(`${month}-01T12:00:00+09:00`));
       const koreaDate = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+      let writingChart;
 
       function setText(id, value) { document.getElementById(id).innerHTML = value; }
+      function praiseFor(characters) {
+        if (characters > 6000) return { label: "Perfect", className: "perfect" };
+        if (characters > 4500) return { label: "Good", className: "good" };
+        if (characters > 3000) return { label: "Great", className: "great" };
+        return null;
+      }
       function calendarDays(first, last) {
         const result = [];
         const cursor = new Date(`${first}T12:00:00Z`);
@@ -81,10 +98,25 @@
         }
         return result;
       }
+      function lastDateOfMonth(month) {
+        const date = new Date(`${month}-01T12:00:00Z`);
+        date.setUTCMonth(date.getUTCMonth() + 1, 0);
+        return date.toISOString().slice(0, 10);
+      }
+      function calendarMonths(first, last) {
+        const result = [];
+        const cursor = new Date(`${first}-01T12:00:00Z`);
+        const end = new Date(`${last}-01T12:00:00Z`);
+        while (cursor <= end) {
+          result.push(cursor.toISOString().slice(0, 7));
+          cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+        }
+        return result;
+      }
       function renderEmpty() {
         document.getElementById("entries").innerHTML = '<p class="empty">아직 집계할 기록이 없어요. 첫 커밋을 <code>ㅇㄷ:500</code>처럼 남겨 보세요.</p>';
         document.getElementById("updated").textContent = "아직 기록이 없습니다";
-        ["year-total", "month-total", "today-total", "best-day"].forEach(id => setText(id, "0 <small>자</small>"));
+        ["year-total", "month-total", "month-average", "today-total"].forEach(id => setText(id, "0 <small>자</small>"));
       }
       function render(data) {
         const { days, entries, generatedAt } = data;
@@ -94,30 +126,55 @@
         const thisMonth = today.slice(0, 7);
         const daysByDate = new Map(days.map(day => [day.date, day]));
         const yearDays = days.filter(day => day.date.startsWith(thisYear));
-        const month = yearDays.filter(day => day.date.startsWith(thisMonth)).reduce((sum, day) => sum + day.characters, 0);
         const year = yearDays.reduce((sum, day) => sum + day.characters, 0);
         const todayCount = daysByDate.get(today)?.characters ?? 0;
-        const best = yearDays.reduce((winner, day) => day.characters > winner.characters ? day : winner, { characters: 0 });
-        const monthDays = calendarDays(`${thisMonth}-01`, today).map(date => daysByDate.get(date) ?? { date, characters: 0 });
-        const entryCountByDate = entries.reduce((counts, entry) => {
-          counts.set(entry.date, (counts.get(entry.date) ?? 0) + 1);
-          return counts;
+        const entriesByDate = entries.reduce((groups, entry) => {
+          const group = groups.get(entry.date) ?? [];
+          group.push(entry);
+          groups.set(entry.date, group);
+          return groups;
         }, new Map());
-        const recentDays = days.filter(day => day.characters > 0).slice(-12).reverse();
+        const availableMonths = calendarMonths(entries[0].date.slice(0, 7), thisMonth);
+        const defaultMonth = thisMonth;
+        const monthSelect = document.getElementById("month-select");
+        monthSelect.innerHTML = availableMonths.slice().reverse().map(month => `<option value="${month}">${fmtMonth(month)}</option>`).join("");
+        monthSelect.value = defaultMonth;
         setText("year-total", `${number.format(year)} <small>자</small>`);
-        setText("month-total", `${number.format(month)} <small>자</small>`);
         setText("today-total", `${number.format(todayCount)} <small>자</small>`);
-        setText("best-day", `${number.format(best.characters)} <small>자</small>`);
-        document.getElementById("period").textContent = `${fmtDate(monthDays[0].date)} – ${fmtDate(today)}`;
         document.getElementById("updated").textContent = generatedAt ? `마지막 갱신 ${new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(generatedAt))}` : "기록을 불러왔습니다";
-        document.getElementById("entries").innerHTML = recentDays.map(day => `<article class="entry"><time datetime="${day.date}">${fmtDate(day.date)}</time><span class="commit">${number.format(entryCountByDate.get(day.date) ?? 0)}번 기록</span><span class="words">${number.format(day.characters)}자</span></article>`).join("");
-        new Chart(document.getElementById("writing-chart"), {
-          type: "bar",
-          data: { labels: monthDays.map(day => fmtDate(day.date)), datasets: [
-            { label: "일별 글자 수", data: monthDays.map(day => day.characters), backgroundColor: "#7650c8", borderRadius: 4, maxBarThickness: 28 }
-          ] },
-          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${number.format(context.raw)}자` } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { callback: value => `${number.format(value)}자` }, grid: { color: "#eee6e2" } } } }
-        });
+        function renderMonth(month) {
+          const lastDate = month === thisMonth ? today : lastDateOfMonth(month);
+          const monthDays = calendarDays(`${month}-01`, lastDate).map(date => daysByDate.get(date) ?? { date, characters: 0 });
+          const monthTotal = monthDays.reduce((sum, day) => sum + day.characters, 0);
+          const writingDays = monthDays.filter(day => day.characters > 0);
+          const monthAverage = writingDays.length ? Math.round(monthTotal / writingDays.length) : 0;
+          const recentDates = [...entriesByDate.keys()].filter(date => date.startsWith(month)).sort().slice(-12).reverse();
+          setText("month-total", `${number.format(monthTotal)} <small>자</small>`);
+          setText("month-average", `${number.format(monthAverage)} <small>자</small>`);
+          document.getElementById("chart-heading").textContent = `${fmtMonth(month)} 일별 분량`;
+          document.getElementById("period").textContent = `${fmtDate(monthDays[0].date)} – ${fmtDate(lastDate)}`;
+          document.getElementById("entries-period").textContent = `${fmtMonth(month)} · 최근 12일`;
+          document.getElementById("entries").innerHTML = recentDates.length ? recentDates.map(date => {
+            let dailyTotal = 0;
+            const entriesWithDailyTotals = [...entriesByDate.get(date)]
+              .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+              .map(entry => ({ ...entry, dailyTotal: dailyTotal += entry.characters }))
+              .reverse();
+            const praise = praiseFor(entriesWithDailyTotals[0].dailyTotal);
+            const praiseMarkup = praise ? `<span class="praise ${praise.className}">${praise.label}</span>` : "";
+            return `<section class="day-group"><h3 class="day-date"><span>${fmtDate(date)}</span>${praiseMarkup}</h3>${entriesWithDailyTotals.map(entry => `<article class="entry"><span class="commit">ㅇㄷ ${number.format(entry.characters)}</span><span class="words">${number.format(entry.dailyTotal)}자</span></article>`).join("")}</section>`;
+          }).join("") : '<p class="empty">이 달에는 집계된 기록이 없어요.</p>';
+          writingChart?.destroy();
+          writingChart = new Chart(document.getElementById("writing-chart"), {
+            type: "bar",
+            data: { labels: monthDays.map(day => fmtDate(day.date)), datasets: [
+              { label: "일별 글자 수", data: monthDays.map(day => day.characters), backgroundColor: "#7650c8", borderRadius: 4, maxBarThickness: 28 }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${number.format(context.raw)}자` } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { callback: value => `${number.format(value)}자` }, grid: { color: "#eee6e2" } } } }
+          });
+        }
+        monthSelect.addEventListener("change", event => renderMonth(event.target.value));
+        renderMonth(defaultMonth);
       }
       fetch("./data.json").then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
     </script>
