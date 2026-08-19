@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="소설 집필 글자 수 기록" />
+    <title>집필 기록</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+      :root { color-scheme: light; --ink: #251b25; --muted: #786d78; --paper: #fffaf5; --card: #ffffff; --line: #eadfdb; --purple: #7650c8; --orange: #ea7c54; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: radial-gradient(circle at 90% 0, #f6e6dc 0, transparent 34rem), var(--paper); color: var(--ink); font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 68px 0 52px; }
+      header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 36px; }
+      h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.3rem, 7vw, 4.5rem); font-weight: 500; letter-spacing: -0.065em; }
+      .eyebrow, .updated { color: var(--muted); font-size: .9rem; }
+      .eyebrow { margin: 0 0 8px; letter-spacing: .08em; text-transform: uppercase; }
+      .updated { margin: 0 0 8px; text-align: right; }
+      .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 38px; }
+      .metric, .chart-area, .entries { background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); }
+      .metric { min-height: 126px; padding: 21px; }
+      .metric span { display: block; color: var(--muted); font-size: .87rem; }
+      .metric strong { display: block; margin-top: 13px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 500; letter-spacing: -.04em; }
+      .metric strong small { font-family: inherit; font-size: .55em; color: var(--muted); }
+      .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 13px; }
+      h2 { margin: 0; font-size: 1rem; font-weight: 650; }
+      .period { color: var(--muted); font-size: .84rem; }
+      .chart-area { padding: 18px 18px 14px; min-height: 360px; }
+      .chart-wrap { height: 300px; position: relative; }
+      .entries-section { margin-top: 38px; }
+      .entries { overflow: hidden; }
+      .entry { display: grid; grid-template-columns: 104px 1fr auto; gap: 16px; align-items: center; padding: 15px 20px; border-top: 1px solid var(--line); }
+      .entry:first-child { border-top: 0; }
+      .entry time, .entry .commit { color: var(--muted); font-size: .88rem; }
+      .entry .words { font-weight: 700; color: var(--purple); font-variant-numeric: tabular-nums; }
+      .empty { color: var(--muted); text-align: center; padding: 76px 20px; }
+      footer { color: var(--muted); font-size: .8rem; margin-top: 24px; }
+      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 42px; } header { display: block; } .updated { text-align: left; margin-top: 15px; } .summary { grid-template-columns: repeat(2, 1fr); } .metric { min-height: 108px; padding: 17px; } .chart-area { padding: 14px 9px 12px; } .entry { grid-template-columns: 86px 1fr; gap: 10px; padding: 14px; } .entry .commit { display: none; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div><p class="eyebrow">Writing dashboard</p><h1>집필 기록</h1></div>
+        <p class="updated" id="updated">기록을 불러오는 중…</p>
+      </header>
+
+      <section class="summary" aria-label="집필 요약">
+        <article class="metric"><span>누적 분량</span><strong id="all-total">–</strong></article>
+        <article class="metric"><span>이번 달</span><strong id="month-total">–</strong></article>
+        <article class="metric"><span>최고 기록</span><strong id="best-day">–</strong></article>
+        <article class="metric"><span>집필 연속일</span><strong id="streak">–</strong></article>
+      </section>
+
+      <section aria-labelledby="chart-heading">
+        <div class="section-title"><h2 id="chart-heading">일별 분량과 누적 기록</h2><span class="period" id="period"></span></div>
+        <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="일별 글자 수와 누적 글자 수 그래프"></canvas></div></div>
+      </section>
+
+      <section class="entries-section" aria-labelledby="entries-heading">
+        <div class="section-title"><h2 id="entries-heading">최근 기록</h2><span class="period">최근 12건</span></div>
+        <div class="entries" id="entries"></div>
+      </section>
+      <footer>커밋 메시지 <code>ㅇㄷ:500</code> 형식의 기록만 집계합니다.</footer>
+    </main>
+
+    <script>
+      const number = new Intl.NumberFormat("ko-KR");
+      const fmtDate = (date) => new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
+      const oneDay = 24 * 60 * 60 * 1000;
+      const differenceInDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / oneDay);
+
+      function setText(id, value) { document.getElementById(id).innerHTML = value; }
+      function writingStreak(days) {
+        let streak = 0;
+        for (let index = days.length - 1; index >= 0 && days[index].characters > 0; index--) streak++;
+        return streak;
+      }
+      function renderEmpty() {
+        document.getElementById("entries").innerHTML = '<p class="empty">아직 집계할 기록이 없어요. 첫 커밋을 <code>ㅇㄷ:500</code>처럼 남겨 보세요.</p>';
+        document.getElementById("updated").textContent = "아직 기록이 없습니다";
+        ["all-total", "month-total", "best-day", "streak"].forEach(id => setText(id, "0 <small>자</small>"));
+      }
+      function render(data) {
+        const { days, entries, generatedAt } = data;
+        if (!days.length) return renderEmpty();
+        const todayMonth = new Date().toISOString().slice(0, 7);
+        const total = days.at(-1).total;
+        const month = days.filter(day => day.date.startsWith(todayMonth)).reduce((sum, day) => sum + day.characters, 0);
+        const best = days.reduce((winner, day) => day.characters > winner.characters ? day : winner, days[0]);
+        const streak = writingStreak(days);
+        setText("all-total", `${number.format(total)} <small>자</small>`);
+        setText("month-total", `${number.format(month)} <small>자</small>`);
+        setText("best-day", `${number.format(best.characters)} <small>자</small>`);
+        setText("streak", `${number.format(streak)} <small>일</small>`);
+        document.getElementById("period").textContent = `${fmtDate(days[0].date)} – ${fmtDate(days.at(-1).date)}`;
+        document.getElementById("updated").textContent = generatedAt ? `마지막 갱신 ${new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(generatedAt))}` : "기록을 불러왔습니다";
+        document.getElementById("entries").innerHTML = entries.slice(-12).reverse().map(entry => `<article class="entry"><time datetime="${entry.timestamp}">${fmtDate(entry.date)}</time><span class="commit">${entry.message}</span><span class="words">${number.format(entry.characters)}자</span></article>`).join("");
+        new Chart(document.getElementById("writing-chart"), {
+          data: { labels: days.map(day => fmtDate(day.date)), datasets: [
+            { type: "bar", label: "일별 글자 수", data: days.map(day => day.characters), backgroundColor: "#7650c8", borderRadius: 4, yAxisID: "daily", order: 2 },
+            { type: "line", label: "누적 글자 수", data: days.map(day => day.total), borderColor: "#ea7c54", pointRadius: 0, pointHoverRadius: 4, borderWidth: 2, tension: .28, yAxisID: "total", order: 1 }
+          ] },
+          options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, padding: 18 } }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${number.format(context.raw)}자` } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, daily: { beginAtZero: true, position: "left", ticks: { callback: value => `${number.format(value)}자` }, grid: { color: "#eee6e2" } }, total: { beginAtZero: true, position: "right", ticks: { callback: value => `${number.format(value)}자` }, grid: { drawOnChartArea: false } } } }
+        });
+      }
+      fetch("./data.json").then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
+    </script>
+  </body>
+</html>
+
