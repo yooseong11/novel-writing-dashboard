@@ -36,9 +36,11 @@
       .day-group:first-child { border-top: 0; }
       .day-date { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 16px 20px 8px; color: var(--ink); font-size: .91rem; font-weight: 700; }
       .praise { font-family: Georgia, "Times New Roman", serif; font-size: .82rem; font-weight: 500; letter-spacing: .02em; }
-      .praise.great { color: #42806e; }
       .praise.good { color: #b36b28; }
+      .praise.great { color: #42806e; }
+      .praise.excellent { color: #3179a8; }
       .praise.perfect { color: var(--purple); }
+      .praise.marvelous { color: #b04472; }
       .entry { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 7px 20px; }
       .day-group .entry:last-child { padding-bottom: 16px; }
       .entry .commit { color: var(--muted); font-size: .88rem; }
@@ -83,10 +85,25 @@
 
       function setText(id, value) { document.getElementById(id).innerHTML = value; }
       function praiseFor(characters) {
-        if (characters > 6000) return { label: "Perfect", className: "perfect" };
-        if (characters > 4500) return { label: "Good", className: "good" };
-        if (characters > 3000) return { label: "Great", className: "great" };
+        if (characters >= 7000) return { label: "MARVELOUS", className: "marvelous" };
+        if (characters >= 6000) return { label: "PERFECT", className: "perfect" };
+        if (characters >= 5000) return { label: "EXCELLENT", className: "excellent" };
+        if (characters >= 4000) return { label: "GREAT", className: "great" };
+        if (characters >= 3000) return { label: "GOOD", className: "good" };
         return null;
+      }
+
+      function fmtTime(timestamp) {
+        return new Intl.DateTimeFormat("ko-KR", {
+          timeZone: "Asia/Seoul",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(new Date(timestamp));
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
       }
       function calendarDays(first, last) {
         const result = [];
@@ -162,7 +179,7 @@
               .reverse();
             const praise = praiseFor(entriesWithDailyTotals[0].dailyTotal);
             const praiseMarkup = praise ? `<span class="praise ${praise.className}">${praise.label}</span>` : "";
-            return `<section class="day-group"><h3 class="day-date"><span>${fmtDate(date)}</span>${praiseMarkup}</h3>${entriesWithDailyTotals.map(entry => `<article class="entry"><span class="commit">ㅇㄷ ${number.format(entry.characters)}</span><span class="words">${number.format(entry.dailyTotal)}자</span></article>`).join("")}</section>`;
+            return `<section class="day-group"><h3 class="day-date"><span>${fmtDate(date)}</span>${praiseMarkup}</h3>${entriesWithDailyTotals.map(entry => `<article class="entry"><span class="commit">${escapeHtml(entry.label ?? "기록")} ${number.format(entry.characters)} · ${fmtTime(entry.timestamp)}</span><span class="words">${number.format(entry.dailyTotal)}자</span></article>`).join("")}</section>`;
           }).join("") : '<p class="empty">이 달에는 집계된 기록이 없어요.</p>';
           writingChart?.destroy();
           writingChart = new Chart(document.getElementById("writing-chart"), {
