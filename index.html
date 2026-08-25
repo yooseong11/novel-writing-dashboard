@@ -21,11 +21,18 @@
       .eyebrow { margin: 0 0 8px; letter-spacing: .08em; text-transform: uppercase; }
       .updated { margin: 0 0 8px; text-align: right; }
       .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 38px; }
-      .metric, .chart-area, .entries { background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); }
+      .metric, .chart-area, .entries, .calendar-card { background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); }
       .metric { min-height: 126px; padding: 21px; }
       .metric span { display: block; color: var(--muted); font-size: .87rem; }
       .metric strong { display: block; margin-top: 13px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 500; letter-spacing: -.04em; }
       .metric strong small { font-family: inherit; font-size: .55em; color: var(--muted); }
+      .calendar-section { margin-bottom: 38px; }
+      .calendar-card { overflow: hidden; }
+      .calendar-event { display: grid; grid-template-columns: 90px 1fr; gap: 14px; padding: 13px 20px; border-top: 1px solid var(--line); }
+      .calendar-event:first-child { border-top: 0; }
+      .calendar-time { color: var(--purple); font-size: .84rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .calendar-name { font-size: .92rem; }
+      .calendar-empty { margin: 0; padding: 25px 20px; color: var(--muted); font-size: .88rem; }
       .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 13px; }
       h2 { margin: 0; font-size: 1rem; font-weight: 650; }
       .period { color: var(--muted); font-size: .84rem; }
@@ -58,6 +65,7 @@
       <nav class="site-nav" aria-label="주 메뉴">
         <a href="index.html" aria-current="page">집필 대시보드</a>
         <a href="counter.html">글자 수 세기</a>
+        <a href="calendar.html">발행 캘린더</a>
       </nav>
       <header>
         <div><p class="eyebrow">Writing dashboard</p><h1>집필 기록</h1></div>
@@ -69,6 +77,11 @@
         <article class="metric"><span>선택한 달</span><strong id="month-total">–</strong></article>
         <article class="metric"><span>이달 평균 작업량</span><strong id="month-average">–</strong></article>
         <article class="metric"><span>오늘</span><strong id="today-total">–</strong></article>
+      </section>
+
+      <section class="calendar-section" aria-labelledby="calendar-heading">
+        <div class="section-title"><h2 id="calendar-heading">다가오는 일정</h2><span class="period">오늘부터 7일</span></div>
+        <div class="calendar-card" id="calendar-events"><p class="calendar-empty">일정을 불러오는 중…</p></div>
       </section>
 
       <section aria-labelledby="chart-heading">
@@ -111,6 +124,23 @@
 
       function escapeHtml(value) {
         return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+      }
+      function renderCalendar(calendar) {
+        const container = document.getElementById("calendar-events");
+        const today = koreaDate();
+        const events = (calendar.events ?? []).filter(event => event.date >= today && event.date <= addDays(today, 6));
+        if (!events.length) {
+          container.innerHTML = '<p class="calendar-empty">다가오는 일정이 없어요.</p>';
+          return;
+        }
+        container.innerHTML = events.map(event => {
+          const day = fmtDate(event.date);
+          const time = event.allDay ? "하루 종일" : event.time;
+          return `<article class="calendar-event"><span class="calendar-time">${day} · ${time}</span><span class="calendar-name">${escapeHtml(event.title)}</span></article>`;
+        }).join("");
+      }
+      function renderCalendarEmpty() {
+        document.getElementById("calendar-events").innerHTML = '<p class="calendar-empty">일정을 불러오지 못했어요.</p>';
       }
       function calendarDays(first, last) {
         const result = [];
@@ -200,7 +230,9 @@
         monthSelect.addEventListener("change", event => renderMonth(event.target.value));
         renderMonth(defaultMonth);
       }
-      fetch(`./data.json?v=${Date.now()}`, { cache: "no-store" }).then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
+      const cacheKey = Date.now();
+      fetch(`./data.json?v=${cacheKey}`, { cache: "no-store" }).then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
+      fetch(`./calendar.json?v=${cacheKey}`, { cache: "no-store" }).then(response => response.ok ? response.json() : Promise.reject()).then(renderCalendar).catch(renderCalendarEmpty);
     </script>
   </body>
 </html>

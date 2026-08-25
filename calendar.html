@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="발행 캘린더" />
+    <title>발행 캘린더</title>
+    <style>
+      :root { color-scheme: light; --ink: #251b25; --muted: #786d78; --paper: #fffaf5; --card: #ffffff; --line: #eadfdb; --purple: #7650c8; --orange: #ea7c54; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: radial-gradient(circle at 90% 0, #f6e6dc 0, transparent 34rem), var(--paper); color: var(--ink); font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 68px 0 52px; }
+      .site-nav { display: flex; gap: 18px; margin-bottom: 46px; font-size: .87rem; }
+      .site-nav a { color: var(--muted); text-decoration: none; }
+      .site-nav a:hover, .site-nav a[aria-current="page"] { color: var(--ink); font-weight: 700; }
+      header { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 36px; }
+      h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.3rem, 7vw, 4.5rem); font-weight: 500; letter-spacing: -0.065em; }
+      .eyebrow, .range { color: var(--muted); font-size: .9rem; }
+      .eyebrow { margin: 0 0 8px; letter-spacing: .08em; text-transform: uppercase; }
+      .range { margin: 0 0 8px; text-align: right; }
+      .calendar { background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); overflow: hidden; }
+      .controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+      .controls h2 { margin: 0; font-size: 1rem; }
+      .buttons { display: flex; gap: 7px; }
+      button { border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: .84rem; padding: 8px 11px; }
+      button:hover { border-color: var(--purple); color: var(--purple); }
+      .weekdays, .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+      .weekdays { background: #fcf6f2; color: var(--muted); font-size: .77rem; text-align: center; }
+      .weekdays span { padding: 11px 4px; }
+      .day { min-height: 128px; padding: 9px; border-right: 1px solid var(--line); border-top: 1px solid var(--line); }
+      .day:nth-child(7n) { border-right: 0; }
+      .day.outside { background: #fdf9f6; color: #b4aab1; }
+      .day.today .date { display: inline-grid; place-items: center; width: 24px; height: 24px; background: var(--purple); color: white; border-radius: 50%; }
+      .date { display: block; margin-bottom: 7px; font-size: .78rem; font-variant-numeric: tabular-nums; }
+      .event { display: block; overflow: hidden; margin: 3px 0; padding: 3px 4px; background: #f1eaff; color: #563a94; font-size: .72rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+      .event.all-day { background: #fbe8df; color: #a04a2c; }
+      .empty { margin: 0; padding: 70px 20px; color: var(--muted); text-align: center; }
+      footer { color: var(--muted); font-size: .8rem; margin-top: 24px; }
+      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 30px; } .site-nav { margin-bottom: 32px; } header { display: block; } .range { text-align: left; margin-top: 15px; } .controls { padding: 14px; } .weekdays span { font-size: .7rem; } .day { min-height: 88px; padding: 6px 4px; } .event { font-size: .63rem; padding: 2px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav class="site-nav" aria-label="주 메뉴">
+        <a href="index.html">집필 대시보드</a>
+        <a href="counter.html">글자 수 세기</a>
+        <a href="calendar.html" aria-current="page">발행 캘린더</a>
+      </nav>
+      <header>
+        <div><p class="eyebrow">Publishing schedule</p><h1>발행 캘린더</h1></div>
+        <p class="range">지난 6개월 · 앞으로 6개월</p>
+      </header>
+      <section class="calendar" aria-labelledby="month-title">
+        <div class="controls"><h2 id="month-title">일정을 불러오는 중…</h2><div class="buttons"><button type="button" id="previous" aria-label="이전 달">이전</button><button type="button" id="next" aria-label="다음 달">다음</button></div></div>
+        <div class="weekdays" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+        <div class="days" id="calendar-days"></div>
+      </section>
+      <footer>표시되는 일정은 대시보드 공개 페이지에서도 볼 수 있습니다.</footer>
+    </main>
+    <script>
+      const koreaDate = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+      const monthFormatter = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" });
+      const escapeHtml = value => String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+      const current = new Date(`${koreaDate()}T12:00:00Z`);
+      let shownMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 1));
+      let events = [];
+
+      function dateKey(date) { return date.toISOString().slice(0, 10); }
+      function render() {
+        const monthKey = shownMonth.toISOString().slice(0, 7);
+        const first = new Date(`${monthKey}-01T12:00:00Z`);
+        const firstDay = first.getUTCDay();
+        const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0, 12));
+        const gridStart = new Date(first); gridStart.setUTCDate(1 - firstDay);
+        const eventsByDate = events.reduce((groups, event) => {
+          (groups[event.date] ??= []).push(event);
+          return groups;
+        }, {});
+        document.getElementById("month-title").textContent = monthFormatter.format(first);
+        document.getElementById("calendar-days").innerHTML = Array.from({ length: 42 }, (_, index) => {
+          const date = new Date(gridStart); date.setUTCDate(gridStart.getUTCDate() + index);
+          const key = dateKey(date);
+          const dayEvents = eventsByDate[key] ?? [];
+          const outside = date.getUTCMonth() !== first.getUTCMonth();
+          const today = key === koreaDate();
+          const labels = dayEvents.map(event => `<span class="event${event.allDay ? " all-day" : ""}" title="${escapeHtml(event.title)}">${event.allDay ? "종일" : event.time} ${escapeHtml(event.title)}</span>`).join("");
+          return `<article class="day${outside ? " outside" : ""}${today ? " today" : ""}"><time class="date" datetime="${key}">${date.getUTCDate()}</time>${labels}</article>`;
+        }).join("");
+      }
+      document.getElementById("previous").addEventListener("click", () => { shownMonth.setUTCMonth(shownMonth.getUTCMonth() - 1); render(); });
+      document.getElementById("next").addEventListener("click", () => { shownMonth.setUTCMonth(shownMonth.getUTCMonth() + 1); render(); });
+      fetch(`./calendar.json?v=${Date.now()}`, { cache: "no-store" })
+        .then(response => response.ok ? response.json() : Promise.reject())
+        .then(data => { events = data.events ?? []; render(); })
+        .catch(() => { document.getElementById("month-title").textContent = "일정을 불러오지 못했어요"; document.getElementById("calendar-days").innerHTML = '<p class="empty">캘린더 데이터를 불러오지 못했어요.</p>'; });
+    </script>
+  </body>
+</html>
