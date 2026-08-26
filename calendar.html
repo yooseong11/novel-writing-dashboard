@@ -83,7 +83,7 @@
           const dayEvents = eventsByDate[key] ?? [];
           const outside = date.getUTCMonth() !== first.getUTCMonth();
           const today = key === koreaDate();
-          const labels = dayEvents.map(event => `<span class="event${event.allDay ? " all-day" : ""}" title="${escapeHtml(event.title)}">${event.allDay ? "종일" : event.time} ${escapeHtml(event.title)}</span>`).join("");
+          const labels = dayEvents.map(event => `<span class="event${event.allDay ? " all-day" : ""}" title="${escapeHtml(event.title)}">${escapeHtml(event.title)}</span>`).join("");
           return `<article class="day${outside ? " outside" : ""}${today ? " today" : ""}"><time class="date" datetime="${key}">${date.getUTCDate()}</time>${labels}</article>`;
         }).join("");
       }

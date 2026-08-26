@@ -49,8 +49,10 @@
       .praise.good { color: #b36b28; }
       .praise.great { color: #42806e; }
       .praise.excellent { color: #3179a8; }
+      .praise.wonderful { color: #3179a8; }
       .praise.perfect { color: var(--purple); }
       .praise.marvelous { color: #b04472; }
+      .praise.legendary { color: #9a5b13; }
       .entry { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 7px 20px; }
       .day-group .entry:last-child { padding-bottom: 16px; }
       .entry .commit { color: var(--muted); font-size: .88rem; }
@@ -105,8 +107,10 @@
 
       function setText(id, value) { document.getElementById(id).innerHTML = value; }
       function praiseFor(characters) {
+        if (characters >= 9000) return { label: "LEGENDARY", className: "legendary" };
+        if (characters >= 8000) return { label: "PERFECT", className: "perfect" };
         if (characters >= 7000) return { label: "MARVELOUS", className: "marvelous" };
-        if (characters >= 6000) return { label: "PERFECT", className: "perfect" };
+        if (characters >= 6000) return { label: "WONDERFUL", className: "wonderful" };
         if (characters >= 5000) return { label: "EXCELLENT", className: "excellent" };
         if (characters >= 4000) return { label: "GREAT", className: "great" };
         if (characters >= 3000) return { label: "GOOD", className: "good" };
