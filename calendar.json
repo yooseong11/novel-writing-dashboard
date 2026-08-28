@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-28T08:41:25.646Z",
+  "generatedAt": "2026-08-28T19:10:19.203Z",
   "events": [
     {
       "date": "2026-08-06",
@@ -36,6 +36,12 @@
       "time": "01:00",
       "allDay": false,
       "title": "ㅇㄷ6"
+    },
+    {
+      "date": "2026-08-29",
+      "time": "17:00",
+      "allDay": false,
+      "title": "ㅇㄷ:ㄴㅋ"
     }
   ]
 }
