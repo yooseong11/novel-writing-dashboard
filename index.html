@@ -49,6 +49,8 @@
       .praise.marvelous { color: #b04472; }
       .praise.legendary { color: #9a5b13; }
       .praise.mythic { color: #7140aa; }
+      .praise.unreal { color: #216d7f; }
+      .praise.ultimate { color: #ad3e63; }
       .entry { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 7px 20px; }
       .day-group .entry:last-child { padding-bottom: 16px; }
       .entry .commit { color: var(--muted); font-size: .88rem; }
@@ -84,7 +86,7 @@
 
       <section class="entries-section" aria-labelledby="entries-heading">
         <div class="section-title"><h2 id="entries-heading">최근 기록</h2><div class="entries-meta"><span class="period" id="entries-period">최근 12일</span></div></div>
-        <p class="praise-guide">3000 GOOD · 4000 GREAT · 5000 EXCELLENT · 6000 WONDERFUL · 7000 MARVELOUS · 8000 PERFECT · 9000 LEGENDARY · 10000 MYTHIC</p>
+        <p class="praise-guide">3000 GOOD · 4000 GREAT · 5000 EXCELLENT · 6000 WONDERFUL · 7000 MARVELOUS · 8000 PERFECT · 9000 LEGENDARY · 10000 MYTHIC · 11000 UNREAL · 12000 ULTIMATE</p>
         <div class="entries" id="entries"></div>
       </section>
       <footer>커밋 메시지 <code>ㅇㄷ:500</code> 형식의 기록만 집계합니다.</footer>
@@ -99,6 +101,8 @@
 
       function setText(id, value) { document.getElementById(id).innerHTML = value; }
       function praiseFor(characters) {
+        if (characters >= 12000) return { label: "ULTIMATE", className: "ultimate" };
+        if (characters >= 11000) return { label: "UNREAL", className: "unreal" };
         if (characters >= 10000) return { label: "MYTHIC", className: "mythic" };
         if (characters >= 9000) return { label: "LEGENDARY", className: "legendary" };
         if (characters >= 8000) return { label: "PERFECT", className: "perfect" };
