@@ -29,6 +29,8 @@
       .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 13px; }
       h2 { margin: 0; font-size: 1rem; font-weight: 650; }
       .period { color: var(--muted); font-size: .84rem; }
+      .entries-meta { display: flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; }
+      .praise-guide { margin: 0 0 9px; color: var(--muted); font-size: .76rem; line-height: 1.5; text-align: left; }
       .chart-controls { display: flex; align-items: center; gap: 10px; }
       .month-select { appearance: none; border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem; padding: 8px 28px 8px 10px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
       .chart-area { padding: 18px 18px 14px; min-height: 360px; }
@@ -46,6 +48,7 @@
       .praise.perfect { color: var(--purple); }
       .praise.marvelous { color: #b04472; }
       .praise.legendary { color: #9a5b13; }
+      .praise.mythic { color: #7140aa; }
       .entry { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 7px 20px; }
       .day-group .entry:last-child { padding-bottom: 16px; }
       .entry .commit { color: var(--muted); font-size: .88rem; }
@@ -80,7 +83,8 @@
       </section>
 
       <section class="entries-section" aria-labelledby="entries-heading">
-        <div class="section-title"><h2 id="entries-heading">최근 기록</h2><span class="period" id="entries-period">최근 12일</span></div>
+        <div class="section-title"><h2 id="entries-heading">최근 기록</h2><div class="entries-meta"><span class="period" id="entries-period">최근 12일</span></div></div>
+        <p class="praise-guide">3000 GOOD · 4000 GREAT · 5000 EXCELLENT · 6000 WONDERFUL · 7000 MARVELOUS · 8000 PERFECT · 9000 LEGENDARY · 10000 MYTHIC</p>
         <div class="entries" id="entries"></div>
       </section>
       <footer>커밋 메시지 <code>ㅇㄷ:500</code> 형식의 기록만 집계합니다.</footer>
@@ -95,6 +99,7 @@
 
       function setText(id, value) { document.getElementById(id).innerHTML = value; }
       function praiseFor(characters) {
+        if (characters >= 10000) return { label: "MYTHIC", className: "mythic" };
         if (characters >= 9000) return { label: "LEGENDARY", className: "legendary" };
         if (characters >= 8000) return { label: "PERFECT", className: "perfect" };
         if (characters >= 7000) return { label: "MARVELOUS", className: "marvelous" };
