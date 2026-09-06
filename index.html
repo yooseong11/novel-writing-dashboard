@@ -32,7 +32,7 @@
       .entries-meta { display: flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; }
       .praise-guide { margin: 0 0 9px; color: var(--muted); font-size: .76rem; line-height: 1.5; text-align: left; }
       .chart-controls { display: flex; align-items: center; gap: 10px; }
-      .month-select { appearance: none; border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem; padding: 8px 28px 8px 10px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
+      .view-select, .period-select { appearance: none; border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem; padding: 8px 28px 8px 10px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
       .chart-area { padding: 18px 18px 14px; min-height: 360px; }
       .chart-wrap { height: 300px; position: relative; }
       .entries-section { margin-top: 38px; }
@@ -74,13 +74,13 @@
 
       <section class="summary" aria-label="집필 요약">
         <article class="metric"><span>올해 누적 분량</span><strong id="year-total">–</strong></article>
-        <article class="metric"><span>선택한 달</span><strong id="month-total">–</strong></article>
-        <article class="metric"><span>이달 평균 작업량</span><strong id="month-average">–</strong></article>
+        <article class="metric"><span id="selected-period-label">선택한 달</span><strong id="month-total">–</strong></article>
+        <article class="metric"><span id="period-average-label">이달 평균 작업량</span><strong id="month-average">–</strong></article>
         <article class="metric"><span>오늘</span><strong id="today-total">–</strong></article>
       </section>
 
       <section aria-labelledby="chart-heading">
-        <div class="section-title"><h2 id="chart-heading">일별 분량</h2><div class="chart-controls"><select class="month-select" id="month-select" aria-label="조회할 달"></select><span class="period" id="period"></span></div></div>
+        <div class="section-title"><h2 id="chart-heading">일별 분량</h2><div class="chart-controls"><select class="view-select" id="view-select" aria-label="조회 단위"><option value="month">월간</option><option value="week">주간</option></select><select class="period-select" id="period-select" aria-label="조회 기간"></select><span class="period" id="period"></span></div></div>
         <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="이번 달 일별 글자 수 그래프"></canvas></div></div>
       </section>
 
@@ -96,6 +96,7 @@
       const number = new Intl.NumberFormat("ko-KR");
       const fmtDate = (date) => new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00+09:00`));
       const fmtMonth = (month) => new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(new Date(`${month}-01T12:00:00+09:00`));
+      const fmtWeek = (first, last) => `${fmtDate(first)} – ${fmtDate(last)}`;
       const koreaDate = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
       let writingChart;
 
@@ -151,6 +152,26 @@
         }
         return result;
       }
+      function weekStart(date) {
+        const week = new Date(`${date}T12:00:00Z`);
+        week.setUTCDate(week.getUTCDate() - ((week.getUTCDay() + 6) % 7));
+        return week.toISOString().slice(0, 10);
+      }
+      function addDays(date, amount) {
+        const result = new Date(`${date}T12:00:00Z`);
+        result.setUTCDate(result.getUTCDate() + amount);
+        return result.toISOString().slice(0, 10);
+      }
+      function calendarWeeks(first, last) {
+        const result = [];
+        let cursor = weekStart(first);
+        const finalWeek = weekStart(last);
+        while (cursor <= finalWeek) {
+          result.push(cursor);
+          cursor = addDays(cursor, 7);
+        }
+        return result;
+      }
       function renderEmpty() {
         document.getElementById("entries").innerHTML = '<p class="empty">아직 집계할 기록이 없어요. 첫 커밋을 <code>ㅇㄷ:500</code>처럼 남겨 보세요.</p>';
         document.getElementById("updated").textContent = "아직 기록이 없습니다";
@@ -172,26 +193,43 @@
           groups.set(entry.date, group);
           return groups;
         }, new Map());
-        const availableMonths = calendarMonths(entries[0].date.slice(0, 7), thisMonth);
-        const defaultMonth = thisMonth;
-        const monthSelect = document.getElementById("month-select");
-        monthSelect.innerHTML = availableMonths.slice().reverse().map(month => `<option value="${month}">${fmtMonth(month)}</option>`).join("");
-        monthSelect.value = defaultMonth;
+        const firstDate = days.map(day => day.date).sort()[0];
+        const periodSelect = document.getElementById("period-select");
+        const viewSelect = document.getElementById("view-select");
         setText("year-total", `${number.format(year)} <small>자</small>`);
         setText("today-total", `${number.format(todayCount)} <small>자</small>`);
         document.getElementById("updated").textContent = generatedAt ? `마지막 갱신 ${new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(generatedAt))}` : "기록을 불러왔습니다";
-        function renderMonth(month) {
-          const lastDate = month === thisMonth ? today : lastDateOfMonth(month);
-          const monthDays = calendarDays(`${month}-01`, lastDate).map(date => daysByDate.get(date) ?? { date, characters: 0 });
-          const monthTotal = monthDays.reduce((sum, day) => sum + day.characters, 0);
-          const writingDays = monthDays.filter(day => day.characters > 0);
-          const monthAverage = writingDays.length ? Math.round(monthTotal / writingDays.length) : 0;
-          const recentDates = [...entriesByDate.keys()].filter(date => date.startsWith(month)).sort().slice(-12).reverse();
-          setText("month-total", `${number.format(monthTotal)} <small>자</small>`);
-          setText("month-average", `${number.format(monthAverage)} <small>자</small>`);
-          document.getElementById("chart-heading").textContent = `${fmtMonth(month)} 일별 분량`;
-          document.getElementById("period").textContent = `${fmtDate(monthDays[0].date)} – ${fmtDate(lastDate)}`;
-          document.getElementById("entries-period").textContent = `${fmtMonth(month)} · 최근 12일`;
+        function setPeriodOptions(mode) {
+          if (mode === "week") {
+            const weeks = calendarWeeks(firstDate, today).reverse();
+            periodSelect.innerHTML = weeks.map(first => {
+              const last = first === weekStart(today) ? today : addDays(first, 6);
+              return `<option value="${first}">${fmtWeek(first, last)}</option>`;
+            }).join("");
+            periodSelect.value = weekStart(today);
+            return;
+          }
+          const months = calendarMonths(firstDate.slice(0, 7), thisMonth).reverse();
+          periodSelect.innerHTML = months.map(month => `<option value="${month}">${fmtMonth(month)}</option>`).join("");
+          periodSelect.value = thisMonth;
+        }
+        function renderPeriod(mode, value) {
+          const isWeek = mode === "week";
+          const firstDateOfPeriod = isWeek ? value : `${value}-01`;
+          const lastDate = isWeek ? (value === weekStart(today) ? today : addDays(value, 6)) : (value === thisMonth ? today : lastDateOfMonth(value));
+          const periodDays = calendarDays(firstDateOfPeriod, lastDate).map(date => daysByDate.get(date) ?? { date, characters: 0 });
+          const periodTotal = periodDays.reduce((sum, day) => sum + day.characters, 0);
+          const writingDays = periodDays.filter(day => day.characters > 0);
+          const periodAverage = writingDays.length ? Math.round(periodTotal / writingDays.length) : 0;
+          const recentDates = [...entriesByDate.keys()].filter(date => date >= firstDateOfPeriod && date <= lastDate).sort().slice(-12).reverse();
+          const periodName = isWeek ? fmtWeek(firstDateOfPeriod, lastDate) : fmtMonth(value);
+          setText("month-total", `${number.format(periodTotal)} <small>자</small>`);
+          setText("month-average", `${number.format(periodAverage)} <small>자</small>`);
+          document.getElementById("selected-period-label").textContent = isWeek ? "선택한 주" : "선택한 달";
+          document.getElementById("period-average-label").textContent = isWeek ? "이 주 평균 작업량" : "이달 평균 작업량";
+          document.getElementById("chart-heading").textContent = `${periodName} ${isWeek ? "주간" : "일별"} 분량`;
+          document.getElementById("period").textContent = `${fmtDate(periodDays[0].date)} – ${fmtDate(lastDate)}`;
+          document.getElementById("entries-period").textContent = isWeek ? `${periodName} · 기록` : `${periodName} · 최근 12일`;
           document.getElementById("entries").innerHTML = recentDates.length ? recentDates.map(date => {
             let dailyTotal = 0;
             const entriesWithDailyTotals = [...entriesByDate.get(date)]
@@ -205,14 +243,19 @@
           writingChart?.destroy();
           writingChart = new Chart(document.getElementById("writing-chart"), {
             type: "bar",
-            data: { labels: monthDays.map(day => fmtDate(day.date)), datasets: [
-              { label: "일별 글자 수", data: monthDays.map(day => day.characters), backgroundColor: "#7650c8", borderRadius: 4, maxBarThickness: 28 }
+            data: { labels: periodDays.map(day => fmtDate(day.date)), datasets: [
+              { label: "일별 글자 수", data: periodDays.map(day => day.characters), backgroundColor: "#7650c8", borderRadius: 4, maxBarThickness: 28 }
             ] },
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${number.format(context.raw)}자` } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { callback: value => `${number.format(value)}자` }, grid: { color: "#eee6e2" } } } }
           });
         }
-        monthSelect.addEventListener("change", event => renderMonth(event.target.value));
-        renderMonth(defaultMonth);
+        viewSelect.addEventListener("change", event => {
+          setPeriodOptions(event.target.value);
+          renderPeriod(event.target.value, periodSelect.value);
+        });
+        periodSelect.addEventListener("change", event => renderPeriod(viewSelect.value, event.target.value));
+        setPeriodOptions(viewSelect.value);
+        renderPeriod(viewSelect.value, periodSelect.value);
       }
       const cacheKey = Date.now();
       fetch(`./data.json?v=${cacheKey}`, { cache: "no-store" }).then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
