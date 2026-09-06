@@ -32,9 +32,19 @@
       .entries-meta { display: flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; }
       .praise-guide { margin: 0 0 9px; color: var(--muted); font-size: .76rem; line-height: 1.5; text-align: left; }
       .chart-controls { display: flex; align-items: center; gap: 10px; }
-      .view-select, .period-select { appearance: none; border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem; padding: 8px 28px 8px 10px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
+      .view-select { appearance: none; border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem; padding: 8px 28px 8px 10px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
+      .month-picker { border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); font: inherit; font-size: .87rem; min-height: 34px; padding: 7px 9px; }
+      .month-picker[hidden] { display: none; }
+      .week-controls { display: flex; align-items: center; gap: 6px; }
+      .week-controls[hidden] { display: none; }
+      .week-controls button, .week-controls input { border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); font: inherit; font-size: .82rem; min-height: 34px; padding: 7px 9px; }
+      .week-controls button { cursor: pointer; }
+      .week-controls button:disabled { cursor: default; color: #b6acb5; background: #fdf9f6; }
+      .week-controls input { min-width: 132px; }
       .chart-area { padding: 18px 18px 14px; min-height: 360px; }
       .chart-wrap { height: 300px; position: relative; }
+      .week-total { display: flex; justify-content: flex-end; align-items: baseline; gap: 9px; margin: 12px 4px 0; color: var(--muted); font-size: .82rem; }
+      .week-total strong { color: var(--purple); font-family: Georgia, "Times New Roman", serif; font-size: 1.25rem; font-weight: 500; letter-spacing: -.03em; }
       .entries-section { margin-top: 38px; }
       .entries { overflow: hidden; }
       .day-group { border-top: 1px solid var(--line); }
@@ -57,7 +67,7 @@
       .entry .words { font-weight: 700; color: var(--purple); font-variant-numeric: tabular-nums; }
       .empty { color: var(--muted); text-align: center; padding: 76px 20px; }
       footer { color: var(--muted); font-size: .8rem; margin-top: 24px; }
-      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 30px; } .site-nav { margin-bottom: 32px; } header { display: block; } .updated { text-align: left; margin-top: 15px; } .summary { grid-template-columns: repeat(2, 1fr); } .metric { min-height: 108px; padding: 17px; } .section-title { align-items: flex-start; flex-wrap: wrap; } .chart-area { padding: 14px 9px 12px; } .day-date, .entry { padding-left: 14px; padding-right: 14px; } }
+      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 30px; } .site-nav { margin-bottom: 32px; } header { display: block; } .updated { text-align: left; margin-top: 15px; } .summary { grid-template-columns: repeat(2, 1fr); } .metric { min-height: 108px; padding: 17px; } .section-title { align-items: flex-start; flex-wrap: wrap; } .chart-controls { width: 100%; flex-wrap: wrap; } .week-controls { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .week-controls input { grid-column: 1 / -1; grid-row: 1; width: 100%; min-width: 0; } .week-controls button { width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; white-space: nowrap; } #previous-week { grid-column: 1; grid-row: 2; } #current-week { grid-column: 2; grid-row: 2; } #next-week { grid-column: 3; grid-row: 2; } .chart-controls > .period { width: 100%; } .chart-area { padding: 14px 9px 12px; } .day-date, .entry { padding-left: 14px; padding-right: 14px; } }
     </style>
   </head>
   <body>
@@ -80,8 +90,8 @@
       </section>
 
       <section aria-labelledby="chart-heading">
-        <div class="section-title"><h2 id="chart-heading">일별 분량</h2><div class="chart-controls"><select class="view-select" id="view-select" aria-label="조회 단위"><option value="month">월간</option><option value="week">주간</option></select><select class="period-select" id="period-select" aria-label="조회 기간"></select><span class="period" id="period"></span></div></div>
-        <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="이번 달 일별 글자 수 그래프"></canvas></div></div>
+        <div class="section-title"><h2 id="chart-heading">일별 분량</h2><div class="chart-controls"><select class="view-select" id="view-select" aria-label="조회 단위"><option value="month">월간</option><option value="week">주간</option></select><input class="month-picker" type="month" id="month-date" aria-label="월간 조회 달" /><div class="week-controls" id="week-controls" hidden><button type="button" id="previous-week" aria-label="이전 주">이전주</button><input type="date" id="week-date" aria-label="주간 조회 날짜" /><button type="button" id="current-week">이번주</button><button type="button" id="next-week" aria-label="다음 주">다음주</button></div><span class="period" id="period"></span></div></div>
+        <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="이번 달 일별 글자 수 그래프"></canvas></div><p class="week-total" id="week-total" hidden><span>주간 분량 합계</span><strong>–</strong></p></div>
       </section>
 
       <section class="entries-section" aria-labelledby="entries-heading">
@@ -142,16 +152,6 @@
         date.setUTCMonth(date.getUTCMonth() + 1, 0);
         return date.toISOString().slice(0, 10);
       }
-      function calendarMonths(first, last) {
-        const result = [];
-        const cursor = new Date(`${first}-01T12:00:00Z`);
-        const end = new Date(`${last}-01T12:00:00Z`);
-        while (cursor <= end) {
-          result.push(cursor.toISOString().slice(0, 7));
-          cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-        }
-        return result;
-      }
       function weekStart(date) {
         const week = new Date(`${date}T12:00:00Z`);
         week.setUTCDate(week.getUTCDate() - ((week.getUTCDay() + 6) % 7));
@@ -161,16 +161,6 @@
         const result = new Date(`${date}T12:00:00Z`);
         result.setUTCDate(result.getUTCDate() + amount);
         return result.toISOString().slice(0, 10);
-      }
-      function calendarWeeks(first, last) {
-        const result = [];
-        let cursor = weekStart(first);
-        const finalWeek = weekStart(last);
-        while (cursor <= finalWeek) {
-          result.push(cursor);
-          cursor = addDays(cursor, 7);
-        }
-        return result;
       }
       function renderEmpty() {
         document.getElementById("entries").innerHTML = '<p class="empty">아직 집계할 기록이 없어요. 첫 커밋을 <code>ㅇㄷ:500</code>처럼 남겨 보세요.</p>';
@@ -194,24 +184,34 @@
           return groups;
         }, new Map());
         const firstDate = days.map(day => day.date).sort()[0];
-        const periodSelect = document.getElementById("period-select");
         const viewSelect = document.getElementById("view-select");
+        const monthDate = document.getElementById("month-date");
+        const weekControls = document.getElementById("week-controls");
+        const weekDate = document.getElementById("week-date");
+        const previousWeekButton = document.getElementById("previous-week");
+        const nextWeekButton = document.getElementById("next-week");
+        const currentWeekButton = document.getElementById("current-week");
+        const firstWeek = weekStart(firstDate);
+        const currentWeek = weekStart(today);
+        let selectedMonth = thisMonth;
+        let selectedWeek = currentWeek;
         setText("year-total", `${number.format(year)} <small>자</small>`);
         setText("today-total", `${number.format(todayCount)} <small>자</small>`);
         document.getElementById("updated").textContent = generatedAt ? `마지막 갱신 ${new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(generatedAt))}` : "기록을 불러왔습니다";
         function setPeriodOptions(mode) {
           if (mode === "week") {
-            const weeks = calendarWeeks(firstDate, today).reverse();
-            periodSelect.innerHTML = weeks.map(first => {
-              const last = first === weekStart(today) ? today : addDays(first, 6);
-              return `<option value="${first}">${fmtWeek(first, last)}</option>`;
-            }).join("");
-            periodSelect.value = weekStart(today);
+            monthDate.hidden = true;
+            weekControls.hidden = false;
+            weekDate.min = firstDate;
+            weekDate.max = today;
+            weekDate.value = selectedWeek;
             return;
           }
-          const months = calendarMonths(firstDate.slice(0, 7), thisMonth).reverse();
-          periodSelect.innerHTML = months.map(month => `<option value="${month}">${fmtMonth(month)}</option>`).join("");
-          periodSelect.value = thisMonth;
+          monthDate.hidden = false;
+          weekControls.hidden = true;
+          monthDate.min = firstDate.slice(0, 7);
+          monthDate.max = thisMonth;
+          monthDate.value = selectedMonth;
         }
         function renderPeriod(mode, value) {
           const isWeek = mode === "week";
@@ -227,6 +227,11 @@
           setText("month-average", `${number.format(periodAverage)} <small>자</small>`);
           document.getElementById("selected-period-label").textContent = isWeek ? "선택한 주" : "선택한 달";
           document.getElementById("period-average-label").textContent = isWeek ? "이 주 평균 작업량" : "이달 평균 작업량";
+          const weekTotal = document.getElementById("week-total");
+          weekTotal.hidden = !isWeek;
+          weekTotal.querySelector("strong").textContent = `${number.format(periodTotal)}자`;
+          previousWeekButton.disabled = !isWeek || firstDateOfPeriod <= firstWeek;
+          nextWeekButton.disabled = !isWeek || firstDateOfPeriod >= currentWeek;
           document.getElementById("chart-heading").textContent = `${periodName} ${isWeek ? "주간" : "일별"} 분량`;
           document.getElementById("period").textContent = `${fmtDate(periodDays[0].date)} – ${fmtDate(lastDate)}`;
           document.getElementById("entries-period").textContent = isWeek ? `${periodName} · 기록` : `${periodName} · 최근 12일`;
@@ -251,11 +256,36 @@
         }
         viewSelect.addEventListener("change", event => {
           setPeriodOptions(event.target.value);
-          renderPeriod(event.target.value, periodSelect.value);
+          renderPeriod(event.target.value, event.target.value === "week" ? selectedWeek : selectedMonth);
         });
-        periodSelect.addEventListener("change", event => renderPeriod(viewSelect.value, event.target.value));
+        monthDate.addEventListener("change", event => {
+          if (!event.target.value) return;
+          selectedMonth = event.target.value;
+          renderPeriod("month", selectedMonth);
+        });
+        weekDate.addEventListener("change", event => {
+          if (!event.target.value) return;
+          selectedWeek = weekStart(event.target.value);
+          weekDate.value = selectedWeek;
+          renderPeriod("week", selectedWeek);
+        });
+        previousWeekButton.addEventListener("click", () => {
+          selectedWeek = addDays(selectedWeek, -7);
+          weekDate.value = selectedWeek;
+          renderPeriod("week", selectedWeek);
+        });
+        nextWeekButton.addEventListener("click", () => {
+          selectedWeek = addDays(selectedWeek, 7);
+          weekDate.value = selectedWeek;
+          renderPeriod("week", selectedWeek);
+        });
+        currentWeekButton.addEventListener("click", () => {
+          selectedWeek = currentWeek;
+          weekDate.value = selectedWeek;
+          renderPeriod("week", selectedWeek);
+        });
         setPeriodOptions(viewSelect.value);
-        renderPeriod(viewSelect.value, periodSelect.value);
+        renderPeriod(viewSelect.value, selectedMonth);
       }
       const cacheKey = Date.now();
       fetch(`./data.json?v=${cacheKey}`, { cache: "no-store" }).then(response => response.ok ? response.json() : Promise.reject()).then(render).catch(renderEmpty);
