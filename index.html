@@ -37,10 +37,11 @@
       .month-picker[hidden] { display: none; }
       .week-controls { display: flex; align-items: center; gap: 6px; }
       .week-controls[hidden] { display: none; }
-      .week-controls button, .week-controls input { border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); font: inherit; font-size: .82rem; min-height: 34px; padding: 7px 9px; }
+      .week-controls button, .week-date { border: 1px solid var(--line); border-radius: 0; background: var(--card); color: var(--ink); font: inherit; font-size: .82rem; min-height: 34px; padding: 7px 9px; }
       .week-controls button { cursor: pointer; }
       .week-controls button:disabled { cursor: default; color: #b6acb5; background: #fdf9f6; }
-      .week-controls input { min-width: 132px; }
+      .week-date { min-width: 132px; }
+      .week-date[hidden] { display: none; }
       .chart-area { padding: 18px 18px 14px; min-height: 360px; }
       .chart-wrap { height: 300px; position: relative; }
       .week-total { display: flex; justify-content: flex-end; align-items: baseline; gap: 9px; margin: 12px 4px 0; color: var(--muted); font-size: .82rem; }
@@ -67,7 +68,7 @@
       .entry .words { font-weight: 700; color: var(--purple); font-variant-numeric: tabular-nums; }
       .empty { color: var(--muted); text-align: center; padding: 76px 20px; }
       footer { color: var(--muted); font-size: .8rem; margin-top: 24px; }
-      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 30px; } .site-nav { margin-bottom: 32px; } header { display: block; } .updated { text-align: left; margin-top: 15px; } .summary { grid-template-columns: repeat(2, 1fr); } .metric { min-height: 108px; padding: 17px; } .section-title { align-items: flex-start; flex-wrap: wrap; } .chart-controls { width: 100%; flex-wrap: wrap; } .week-controls { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .week-controls input { grid-column: 1 / -1; grid-row: 1; width: 100%; min-width: 0; } .week-controls button { width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; white-space: nowrap; } #previous-week { grid-column: 1; grid-row: 2; } #current-week { grid-column: 2; grid-row: 2; } #next-week { grid-column: 3; grid-row: 2; } .chart-controls > .period { width: 100%; } .chart-area { padding: 14px 9px 12px; } .day-date, .entry { padding-left: 14px; padding-right: 14px; } }
+      @media (max-width: 700px) { main { width: min(100% - 24px, 1080px); padding-top: 30px; } .site-nav { margin-bottom: 32px; } header { display: block; } .updated { text-align: left; margin-top: 15px; } .summary { grid-template-columns: repeat(2, 1fr); } .metric { min-height: 108px; padding: 17px; } .section-title { align-items: flex-start; flex-wrap: wrap; } .chart-controls { width: 100%; flex-wrap: wrap; } .week-date { flex: 1; min-width: 0; } .week-controls { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .week-controls button { width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; white-space: nowrap; } #previous-week { grid-column: 1; } #current-week { grid-column: 2; } #next-week { grid-column: 3; } .chart-controls > .period { display: none; } .chart-area { padding: 14px 9px 12px; } .day-date, .entry { padding-left: 14px; padding-right: 14px; } }
     </style>
   </head>
   <body>
@@ -90,7 +91,7 @@
       </section>
 
       <section aria-labelledby="chart-heading">
-        <div class="section-title"><h2 id="chart-heading">일별 분량</h2><div class="chart-controls"><select class="view-select" id="view-select" aria-label="조회 단위"><option value="month">월간</option><option value="week">주간</option></select><input class="month-picker" type="month" id="month-date" aria-label="월간 조회 달" /><div class="week-controls" id="week-controls" hidden><button type="button" id="previous-week" aria-label="이전 주">이전주</button><input type="date" id="week-date" aria-label="주간 조회 날짜" /><button type="button" id="current-week">이번주</button><button type="button" id="next-week" aria-label="다음 주">다음주</button></div><span class="period" id="period"></span></div></div>
+        <div class="section-title"><h2 id="chart-heading">일별 분량</h2><div class="chart-controls"><select class="view-select" id="view-select" aria-label="조회 단위"><option value="month">월간</option><option value="week">주간</option></select><input class="month-picker" type="month" id="month-date" aria-label="월간 조회 달" /><input class="week-date" type="date" id="week-date" aria-label="주간 조회 날짜" hidden /><div class="week-controls" id="week-controls" hidden><button type="button" id="previous-week" aria-label="이전 주">이전주</button><button type="button" id="current-week">이번주</button><button type="button" id="next-week" aria-label="다음 주">다음주</button></div><span class="period" id="period"></span></div></div>
         <div class="chart-area"><div class="chart-wrap"><canvas id="writing-chart" aria-label="이번 달 일별 글자 수 그래프"></canvas></div><p class="week-total" id="week-total" hidden><span>주간 분량 합계</span><strong>–</strong></p></div>
       </section>
 
@@ -201,6 +202,7 @@
         function setPeriodOptions(mode) {
           if (mode === "week") {
             monthDate.hidden = true;
+            weekDate.hidden = false;
             weekControls.hidden = false;
             weekDate.min = firstDate;
             weekDate.max = today;
@@ -208,6 +210,7 @@
             return;
           }
           monthDate.hidden = false;
+          weekDate.hidden = true;
           weekControls.hidden = true;
           monthDate.min = firstDate.slice(0, 7);
           monthDate.max = thisMonth;
@@ -226,9 +229,10 @@
           setText("month-total", `${number.format(periodTotal)} <small>자</small>`);
           setText("month-average", `${number.format(periodAverage)} <small>자</small>`);
           document.getElementById("selected-period-label").textContent = isWeek ? "선택한 주" : "선택한 달";
-          document.getElementById("period-average-label").textContent = isWeek ? "이 주 평균 작업량" : "이달 평균 작업량";
+          document.getElementById("period-average-label").textContent = isWeek ? "주간 평균 작업량" : "월간 평균 작업량";
           const weekTotal = document.getElementById("week-total");
-          weekTotal.hidden = !isWeek;
+          weekTotal.hidden = false;
+          weekTotal.querySelector("span").textContent = isWeek ? "주간 분량 합계" : "월간 분량 합계";
           weekTotal.querySelector("strong").textContent = `${number.format(periodTotal)}자`;
           previousWeekButton.disabled = !isWeek || firstDateOfPeriod <= firstWeek;
           nextWeekButton.disabled = !isWeek || firstDateOfPeriod >= currentWeek;
